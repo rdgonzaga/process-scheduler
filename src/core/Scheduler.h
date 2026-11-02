@@ -3,6 +3,7 @@
 #include <atomic>
 #include <barrier>
 #include <deque>
+#include <map>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -23,7 +24,10 @@ public:
     void start(const SystemConfig& config);
     void stop();
 
+    // nullptr if the name is taken
     ProcessPtr spawn(const std::string& name);
+    // nullptr if there's no such process or it already finished
+    ProcessPtr find(const std::string& name);
 
     // guards everything below, and any Process reachable from it
     std::mutex mtx;
@@ -50,6 +54,7 @@ private:
     std::deque<ProcessPtr> ready_;
     std::vector<Sleeper> sleeping_;
     std::vector<ProcessPtr> finished_;
+    std::map<std::string, ProcessPtr> byName_;
 
     std::atomic<bool> quit_ = false;
     bool quitting_ = false;

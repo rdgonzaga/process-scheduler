@@ -1,9 +1,11 @@
 #include "core/Commands.h"
 
+#include <algorithm>
 #include <cctype>
 #include <iostream>
 #include <vector>
 
+#include "art/AsciiArt.h"
 #include "ui/Console.h"
 
 namespace commands {
@@ -36,6 +38,104 @@ void cmdInitialize(Shell& shell, const std::string&) {
     std::cout << "Initialized with " << shell.config.numCpu << " CPU(s) using " << shell.config.scheduler << ".\n";
 }
 
+void splitCommand(const std::string& line, std::string& name, std::string& args) {
+    std::string trimmed = trim(line);
+    size_t space = trimmed.find(' ');
+    name = toLower(trimmed.substr(0, space));
+    args = space == std::string::npos ? "" : trim(trimmed.substr(space + 1));
+}
+
+struct Screen {
+    Shell& shell;
+    ProcessPtr process;
+    bool detached = false;
+};
+
+struct ScreenCommand {
+    const char* name;
+    void (*run)(Screen& screen);
+};
+
+void cmdProcessSmi(Screen& screen) {
+    std::string out;
+    {
+        std::lock_guard<std::mutex> lock(screen.shell.scheduler.mtx);
+        const Process& p = *screen.process;
+        std::string message = printMessage(p);
+
+        out += "Process name: " + p.name + "\n";
+        out += "ID: " + std::to_string(p.id) + "\n";
+        out += "Logs:\n";
+        for (const LogEntry& log : p.logs) {
+            out += "(" + timestamp(log.time) + ") Core:" + std::to_string(log.core) + " \"" + message + "\"\n";
+        }
+        out += "\n";
+        if (p.finished()) {
+            out += "Finished!\n";
+        } else {
+            out += "Current instruction line: " + std::to_string(p.pc) + "\n";
+            out += "Lines of code: " + std::to_string(p.totalLines) + "\n";
+        }
+    }
+    console::write(out + "\n");
+}
+
+void cmdScreenExit(Screen& screen) {
+    screen.detached = true;
+}
+
+const std::vector<ScreenCommand>& screenMenu() {
+    static const std::vector<ScreenCommand> table = {
+        {"process-smi", cmdProcessSmi},
+        {"exit",        cmdScreenExit},
+    };
+    return table;
+}
+
+void attach(Shell& shell, ProcessPtr process) {
+    console::clear();
+    Screen screen{shell, std::move(process)};
+    std::string line, name, args;
+
+    while (!screen.detached) {
+        std::cout << "root:\\> " << std::flush;
+        if (!std::getline(std::cin, line)) {
+            shell.quit = true;
+            return;
+        }
+        splitCommand(line, name, args);
+        if (name.empty()) continue;
+
+        auto it = std::find_if(screenMenu().begin(), screenMenu().end(),
+                               [&](const ScreenCommand& c) { return name == c.name; });
+        if (it == screenMenu().end()) {
+            console::error("Error: '" + name + "' is not a recognized command.");
+            continue;
+        }
+        it->run(screen);
+    }
+
+    console::clear();
+    console::write(ascii::header());
+}
+
+void cmdScreen(Shell& shell, const std::string& args) {
+    std::string flag, name;
+    splitCommand(args, flag, name);
+
+    if ((flag != "-s" && flag != "-r") || name.empty()) {
+        console::error("Usage: screen -s <name> | screen -r <name>");
+        return;
+    }
+
+    ProcessPtr process = flag == "-s" ? shell.scheduler.spawn(name) : shell.scheduler.find(name);
+    if (!process) {
+        console::error(flag == "-s" ? "Process " + name + " already exists." : "Process " + name + " not found.");
+        return;
+    }
+    attach(shell, process);
+}
+
 void cmdExit(Shell& shell, const std::string&) {
     shell.quit = true;
 }
@@ -43,6 +143,7 @@ void cmdExit(Shell& shell, const std::string&) {
 const std::vector<Command>& mainMenu() {
     static const std::vector<Command> table = {
         {"initialize", false, cmdInitialize},
+        {"screen",     true,  cmdScreen},
         {"exit",       false, cmdExit},
     };
     return table;
@@ -51,12 +152,9 @@ const std::vector<Command>& mainMenu() {
 }
 
 void execute(Shell& shell, const std::string& line) {
-    std::string trimmed = trim(line);
-    if (trimmed.empty()) return;
-
-    size_t space = trimmed.find(' ');
-    std::string name = toLower(trimmed.substr(0, space));
-    std::string args = space == std::string::npos ? "" : trim(trimmed.substr(space + 1));
+    std::string name, args;
+    splitCommand(line, name, args);
+    if (name.empty()) return;
 
     for (const Command& command : mainMenu()) {
         if (name == command.name) {

@@ -29,11 +29,27 @@ void Scheduler::stop() {
 }
 
 ProcessPtr Scheduler::spawn(const std::string& name) {
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        if (byName_.count(name)) return nullptr;
+    }
+
+    // generating thousands of instructions shouldn't stall the cores
     auto process = std::make_shared<Process>(makeProcess(0, name, config_.minIns, config_.maxIns));
+
     std::lock_guard<std::mutex> lock(mtx);
+    if (byName_.count(name)) return nullptr;
     process->id = nextId_++;
+    byName_[name] = process;
     ready_.push_back(process);
     return process;
+}
+
+ProcessPtr Scheduler::find(const std::string& name) {
+    std::lock_guard<std::mutex> lock(mtx);
+    auto it = byName_.find(name);
+    if (it == byName_.end() || it->second->finished()) return nullptr;
+    return it->second;
 }
 
 void Scheduler::clockLoop() {
