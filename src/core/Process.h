@@ -34,6 +34,8 @@ struct Process {
     std::vector<Instruction> code;
     uint64_t pc = 0;
     uint64_t totalLines = 0;
+    // busy-wait ticks left before the next instruction; survives preemption
+    uint64_t delayLeft = 0;
     std::array<uint16_t, VAR_COUNT> vars{};
     std::vector<LogEntry> logs;
 

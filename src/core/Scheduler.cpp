@@ -89,6 +89,15 @@ std::string Scheduler::report() {
     return out.str();
 }
 
+void Scheduler::fillCores() {
+    for (Core& core : cores_) {
+        if (core.process || ready_.empty()) continue;
+        core.process = ready_.front();
+        core.ticksUsed = 0;
+        ready_.pop_front();
+    }
+}
+
 void Scheduler::clockLoop() {
     while (true) {
         {
@@ -99,13 +108,7 @@ void Scheduler::clockLoop() {
                                                [this](const Sleeper& s) { return s.wakeTick > tick_; });
             for (auto it = awake; it != sleeping_.end(); ++it) ready_.push_back(it->process);
             sleeping_.erase(awake, sleeping_.end());
-
-            for (Core& core : cores_) {
-                if (core.process || ready_.empty()) continue;
-                core.process = ready_.front();
-                core.delayLeft = 0;
-                ready_.pop_front();
-            }
+            fillCores();
         }
 
         // cores read quitting_ only after this wait, so they all agree with the clock
@@ -114,6 +117,11 @@ void Scheduler::clockLoop() {
         if (quitting_) return;
         sync_->arrive_and_wait();
 
+        // refill cores freed this tick, or screen -ls between ticks sees them idle
+        {
+            std::lock_guard<std::mutex> lock(mtx);
+            fillCores();
+        }
         std::this_thread::sleep_for(std::chrono::milliseconds(config::TICK_MS));
     }
 }
@@ -132,19 +140,30 @@ void Scheduler::runCore(int index) {
     Core& core = cores_[index];
     if (!core.process) return;
 
-    if (core.delayLeft > 0) {
-        --core.delayLeft;
-        return;
+    Process& p = *core.process;
+    ++core.ticksUsed;
+
+    if (p.delayLeft > 0) {
+        --p.delayLeft;
+    } else {
+        uint8_t sleepTicks = step(p, index);
+        p.delayLeft = config_.delaysPerExec;
+
+        if (p.finished()) {
+            finished_.push_back(core.process);
+            core.process = nullptr;
+            return;
+        }
+        if (sleepTicks > 0) {
+            p.delayLeft = 0;
+            sleeping_.push_back({tick_ + sleepTicks, core.process});
+            core.process = nullptr;
+            return;
+        }
     }
 
-    uint8_t sleepTicks = step(*core.process, index);
-    core.delayLeft = config_.delaysPerExec;
-
-    if (core.process->finished()) {
-        finished_.push_back(core.process);
-        core.process = nullptr;
-    } else if (sleepTicks > 0) {
-        sleeping_.push_back({tick_ + sleepTicks, core.process});
+    if (config_.scheduler == "rr" && core.ticksUsed >= config_.quantumCycles) {
+        ready_.push_back(core.process);
         core.process = nullptr;
     }
 }
