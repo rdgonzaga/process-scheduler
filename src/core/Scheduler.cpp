@@ -58,13 +58,9 @@ std::string Scheduler::report() {
     std::lock_guard<std::mutex> lock(mtx);
 
     int used = 0;
+    for (const Core& core : cores_) used += core.process ? 1 : 0;
     size_t width = 10;
-    for (const Core& core : cores_) {
-        if (!core.process) continue;
-        ++used;
-        width = std::max(width, core.process->name.size());
-    }
-    for (const ProcessPtr& p : finished_) width = std::max(width, p->name.size());
+    for (const auto& [name, p] : byName_) width = std::max(width, name.size());
 
     int total = static_cast<int>(cores_.size());
     std::ostringstream out;
@@ -84,6 +80,9 @@ std::string Scheduler::report() {
     for (int i = 0; i < total; ++i) {
         if (cores_[i].process) row(*cores_[i].process, "Core: " + std::to_string(i), cores_[i].process->pc);
     }
+    // waiting for a core or asleep: still running as far as the user can tell
+    for (const ProcessPtr& p : ready_) row(*p, "Core: -", p->pc);
+    for (const Sleeper& s : sleeping_) row(*s.process, "Core: -", s.process->pc);
     out << "\nFinished processes:\n";
     for (const ProcessPtr& p : finished_) row(*p, "Finished", p->totalLines);
     out << "--------------------------------------\n";
