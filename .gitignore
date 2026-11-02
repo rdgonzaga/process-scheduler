@@ -3,3 +3,4 @@ build/
 *.user
 Screenshot*.png
 csopesy-log.txt
+process-scheduler

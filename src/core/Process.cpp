@@ -119,7 +119,11 @@ std::string printMessage(const Process& p) {
 
 std::string timestamp(std::time_t time) {
     std::tm local{};
+#if defined(_WIN32)
     localtime_s(&local, &time);
+#else
+    localtime_r(&time, &local);
+#endif
     char buffer[32];
     std::strftime(buffer, sizeof(buffer), "%m/%d/%Y %I:%M:%S%p", &local);
     return buffer;
