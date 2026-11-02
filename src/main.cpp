@@ -17,6 +17,7 @@ int main() {
         commands::execute(shell, line);
     }
 
+    shell.scheduler.stop();
     console::restore();
     return 0;
 }

@@ -32,6 +32,7 @@ void cmdInitialize(Shell& shell, const std::string&) {
         return;
     }
     shell.initialized = true;
+    shell.scheduler.start(shell.config);
     std::cout << "Initialized with " << shell.config.numCpu << " CPU(s) using " << shell.config.scheduler << ".\n";
 }
 

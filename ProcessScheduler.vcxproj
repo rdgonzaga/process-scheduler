@@ -69,6 +69,7 @@
     <ClCompile Include="src\art\AsciiArt.cpp" />
     <ClCompile Include="src\core\Commands.cpp" />
     <ClCompile Include="src\core\Process.cpp" />
+    <ClCompile Include="src\core\Scheduler.cpp" />
     <ClCompile Include="src\core\SystemConfig.cpp" />
     <ClCompile Include="src\ui\Console.cpp" />
   </ItemGroup>
@@ -77,6 +78,7 @@
     <ClInclude Include="src\art\AsciiArt.h" />
     <ClInclude Include="src\core\Commands.h" />
     <ClInclude Include="src\core\Process.h" />
+    <ClInclude Include="src\core\Scheduler.h" />
     <ClInclude Include="src\core\SystemConfig.h" />
     <ClInclude Include="src\ui\Console.h" />
   </ItemGroup>

@@ -2,12 +2,14 @@
 
 #include <string>
 
+#include "core/Scheduler.h"
 #include "core/SystemConfig.h"
 
 struct Shell {
     bool quit = false;
     bool initialized = false;
     SystemConfig config;
+    Scheduler scheduler;
 };
 
 namespace commands {
