@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <iomanip>
+#include <sstream>
 
 #include "Config.h"
 
@@ -50,6 +52,42 @@ ProcessPtr Scheduler::find(const std::string& name) {
     auto it = byName_.find(name);
     if (it == byName_.end() || it->second->finished()) return nullptr;
     return it->second;
+}
+
+std::string Scheduler::report() {
+    std::lock_guard<std::mutex> lock(mtx);
+
+    int used = 0;
+    size_t width = 10;
+    for (const Core& core : cores_) {
+        if (!core.process) continue;
+        ++used;
+        width = std::max(width, core.process->name.size());
+    }
+    for (const ProcessPtr& p : finished_) width = std::max(width, p->name.size());
+
+    int total = static_cast<int>(cores_.size());
+    std::ostringstream out;
+    out << "CPU utilization: " << (total ? used * 100 / total : 0) << "%\n";
+    out << "Cores used: " << used << "\n";
+    out << "Cores available: " << total - used << "\n\n";
+    out << "--------------------------------------\n";
+
+    auto row = [&](const Process& p, const std::string& where, uint64_t line) {
+        out << std::left << std::setw(static_cast<int>(width) + 3) << p.name
+            << "(" << timestamp(p.createdAt) << ")    "
+            << std::setw(12) << where
+            << line << " / " << p.totalLines << "\n";
+    };
+
+    out << "Running processes:\n";
+    for (int i = 0; i < total; ++i) {
+        if (cores_[i].process) row(*cores_[i].process, "Core: " + std::to_string(i), cores_[i].process->pc);
+    }
+    out << "\nFinished processes:\n";
+    for (const ProcessPtr& p : finished_) row(*p, "Finished", p->totalLines);
+    out << "--------------------------------------\n";
+    return out.str();
 }
 
 void Scheduler::clockLoop() {

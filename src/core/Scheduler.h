@@ -29,6 +29,9 @@ public:
     // nullptr if there's no such process or it already finished
     ProcessPtr find(const std::string& name);
 
+    // the screen -ls text: utilization, then running and finished processes
+    std::string report();
+
     // guards everything below, and any Process reachable from it
     std::mutex mtx;
 

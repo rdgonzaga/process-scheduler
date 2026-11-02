@@ -123,8 +123,12 @@ void cmdScreen(Shell& shell, const std::string& args) {
     std::string flag, name;
     splitCommand(args, flag, name);
 
+    if (flag == "-ls" && name.empty()) {
+        console::write(shell.scheduler.report() + "\n");
+        return;
+    }
     if ((flag != "-s" && flag != "-r") || name.empty()) {
-        console::error("Usage: screen -s <name> | screen -r <name>");
+        console::error("Usage: screen -s <name> | screen -r <name> | screen -ls");
         return;
     }
 
