@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <chrono>
+#include <iomanip>
+#include <sstream>
 
 #include "Config.h"
 
@@ -29,11 +31,62 @@ void Scheduler::stop() {
 }
 
 ProcessPtr Scheduler::spawn(const std::string& name) {
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        if (byName_.count(name)) return nullptr;
+    }
+
+    // generating thousands of instructions shouldn't stall the cores
     auto process = std::make_shared<Process>(makeProcess(0, name, config_.minIns, config_.maxIns));
+
     std::lock_guard<std::mutex> lock(mtx);
+    if (byName_.count(name)) return nullptr;
     process->id = nextId_++;
+    byName_[name] = process;
     ready_.push_back(process);
     return process;
+}
+
+ProcessPtr Scheduler::find(const std::string& name) {
+    std::lock_guard<std::mutex> lock(mtx);
+    auto it = byName_.find(name);
+    if (it == byName_.end() || it->second->finished()) return nullptr;
+    return it->second;
+}
+
+std::string Scheduler::report() {
+    std::lock_guard<std::mutex> lock(mtx);
+
+    int used = 0;
+    for (const Core& core : cores_) used += core.process ? 1 : 0;
+    size_t width = 10;
+    for (const auto& [name, p] : byName_) width = std::max(width, name.size());
+
+    int total = static_cast<int>(cores_.size());
+    std::ostringstream out;
+    out << "CPU utilization: " << (total ? used * 100 / total : 0) << "%\n";
+    out << "Cores used: " << used << "\n";
+    out << "Cores available: " << total - used << "\n\n";
+    out << "--------------------------------------\n";
+
+    auto row = [&](const Process& p, const std::string& where, uint64_t line) {
+        out << std::left << std::setw(static_cast<int>(width) + 3) << p.name
+            << "(" << timestamp(p.createdAt) << ")    "
+            << std::setw(12) << where
+            << line << " / " << p.totalLines << "\n";
+    };
+
+    out << "Running processes:\n";
+    for (int i = 0; i < total; ++i) {
+        if (cores_[i].process) row(*cores_[i].process, "Core: " + std::to_string(i), cores_[i].process->pc);
+    }
+    // waiting for a core or asleep: still running as far as the user can tell
+    for (const ProcessPtr& p : ready_) row(*p, "Core: -", p->pc);
+    for (const Sleeper& s : sleeping_) row(*s.process, "Core: -", s.process->pc);
+    out << "\nFinished processes:\n";
+    for (const ProcessPtr& p : finished_) row(*p, "Finished", p->totalLines);
+    out << "--------------------------------------\n";
+    return out.str();
 }
 
 void Scheduler::clockLoop() {

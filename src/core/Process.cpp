@@ -110,3 +110,11 @@ uint8_t step(Process& p, int core) {
 std::string printMessage(const Process& p) {
     return "Hello world from " + p.name + "!";
 }
+
+std::string timestamp(std::time_t time) {
+    std::tm local{};
+    localtime_s(&local, &time);
+    char buffer[32];
+    std::strftime(buffer, sizeof(buffer), "%m/%d/%Y %I:%M:%S%p", &local);
+    return buffer;
+}

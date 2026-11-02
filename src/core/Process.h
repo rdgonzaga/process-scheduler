@@ -47,3 +47,6 @@ Process makeProcess(int id, const std::string& name, uint64_t minIns, uint64_t m
 uint8_t step(Process& p, int core);
 
 std::string printMessage(const Process& p);
+
+// MM/DD/YYYY hh:mm:ssAM, the format in the spec's mockups
+std::string timestamp(std::time_t time);
