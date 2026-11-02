@@ -159,13 +159,17 @@ void cmdSchedulerStop(Shell& shell, const std::string&) {
 }
 
 void cmdReportUtil(Shell& shell, const std::string&) {
-    std::filesystem::path path = std::filesystem::absolute("csopesy-log.txt");
+    std::error_code ec;
+    std::filesystem::path path = std::filesystem::absolute("csopesy-log.txt", ec);
+    if (ec) path = "csopesy-log.txt";
+
     std::ofstream file(path);
+    file << shell.scheduler.report();
+    file.close();
     if (!file) {
         console::error("Error: couldn't write " + path.generic_string());
         return;
     }
-    file << shell.scheduler.report();
     std::cout << "Report generated at " << path.generic_string() << "!\n";
 }
 

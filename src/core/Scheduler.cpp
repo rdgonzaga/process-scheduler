@@ -55,36 +55,57 @@ ProcessPtr Scheduler::find(const std::string& name) {
 }
 
 std::string Scheduler::report() {
-    std::lock_guard<std::mutex> lock(mtx);
-
+    struct Row {
+        std::string name;
+        std::time_t createdAt;
+        int core;
+        uint64_t line;
+        uint64_t totalLines;
+    };
+    std::vector<Row> running, finished;
     int used = 0;
-    for (const Core& core : cores_) used += core.process ? 1 : 0;
-    size_t width = 10;
-    for (const auto& [name, p] : byName_) width = std::max(width, name.size());
+    int total = 0;
 
-    int total = static_cast<int>(cores_.size());
+    // copy under the lock and format after, so a long list doesn't stall the cores
+    {
+        std::lock_guard<std::mutex> lock(mtx);
+        auto add = [](std::vector<Row>& rows, const Process& p, int core, uint64_t line) {
+            rows.push_back({p.name, p.createdAt, core, line, p.totalLines});
+        };
+
+        total = static_cast<int>(cores_.size());
+        for (int i = 0; i < total; ++i) {
+            if (!cores_[i].process) continue;
+            ++used;
+            add(running, *cores_[i].process, i, cores_[i].process->pc);
+        }
+        // waiting for a core or asleep: still running as far as the user can tell
+        for (const ProcessPtr& p : ready_) add(running, *p, -1, p->pc);
+        for (const Sleeper& s : sleeping_) add(running, *s.process, -1, s.process->pc);
+        for (const ProcessPtr& p : finished_) add(finished, *p, -1, p->totalLines);
+    }
+
+    size_t width = 10;
+    for (const Row& r : running) width = std::max(width, r.name.size());
+    for (const Row& r : finished) width = std::max(width, r.name.size());
+
     std::ostringstream out;
     out << "CPU utilization: " << (total ? used * 100 / total : 0) << "%\n";
     out << "Cores used: " << used << "\n";
     out << "Cores available: " << total - used << "\n\n";
     out << "--------------------------------------\n";
 
-    auto row = [&](const Process& p, const std::string& where, uint64_t line) {
-        out << std::left << std::setw(static_cast<int>(width) + 3) << p.name
-            << "(" << timestamp(p.createdAt) << ")    "
+    auto print = [&](const Row& r, const std::string& where) {
+        out << std::left << std::setw(static_cast<int>(width) + 3) << r.name
+            << "(" << timestamp(r.createdAt) << ")    "
             << std::setw(12) << where
-            << line << " / " << p.totalLines << "\n";
+            << r.line << " / " << r.totalLines << "\n";
     };
 
     out << "Running processes:\n";
-    for (int i = 0; i < total; ++i) {
-        if (cores_[i].process) row(*cores_[i].process, "Core: " + std::to_string(i), cores_[i].process->pc);
-    }
-    // waiting for a core or asleep: still running as far as the user can tell
-    for (const ProcessPtr& p : ready_) row(*p, "Core: -", p->pc);
-    for (const Sleeper& s : sleeping_) row(*s.process, "Core: -", s.process->pc);
+    for (const Row& r : running) print(r, r.core < 0 ? "Core: -" : "Core: " + std::to_string(r.core));
     out << "\nFinished processes:\n";
-    for (const ProcessPtr& p : finished_) row(*p, "Finished", p->totalLines);
+    for (const Row& r : finished) print(r, "Finished");
     out << "--------------------------------------\n";
     return out.str();
 }
@@ -99,7 +120,10 @@ void Scheduler::fillCores() {
 }
 
 bool Scheduler::startBatches() {
-    return !generating_.exchange(true);
+    if (generating_) return false;
+    sinceBatch_ = 0;
+    generating_ = true;
+    return true;
 }
 
 bool Scheduler::stopBatches() {
