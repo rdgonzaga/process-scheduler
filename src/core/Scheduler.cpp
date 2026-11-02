@@ -98,11 +98,36 @@ void Scheduler::fillCores() {
     }
 }
 
+bool Scheduler::startBatches() {
+    return !generating_.exchange(true);
+}
+
+bool Scheduler::stopBatches() {
+    return generating_.exchange(false);
+}
+
 void Scheduler::clockLoop() {
     while (true) {
+        ProcessPtr batch;
+        if (generating_ && ++sinceBatch_ >= config_.batchProcessFreq) {
+            sinceBatch_ = 0;
+            batch = std::make_shared<Process>(makeProcess(0, "", config_.minIns, config_.maxIns));
+        }
+
         {
             std::lock_guard<std::mutex> lock(mtx);
             ++tick_;
+
+            if (batch) {
+                // skip names already taken with screen -s
+                do {
+                    ++batchNo_;
+                    batch->name = (batchNo_ < 10 ? "p0" : "p") + std::to_string(batchNo_);
+                } while (byName_.count(batch->name));
+                batch->id = nextId_++;
+                byName_[batch->name] = batch;
+                ready_.push_back(batch);
+            }
 
             auto awake = std::stable_partition(sleeping_.begin(), sleeping_.end(),
                                                [this](const Sleeper& s) { return s.wakeTick > tick_; });
