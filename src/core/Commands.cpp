@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <vector>
 
@@ -140,15 +142,45 @@ void cmdScreen(Shell& shell, const std::string& args) {
     attach(shell, process);
 }
 
+void cmdSchedulerStart(Shell& shell, const std::string&) {
+    if (!shell.scheduler.startBatches()) {
+        console::error("The scheduler is already generating processes.");
+        return;
+    }
+    std::cout << "Scheduler started. Generating processes every " << shell.config.batchProcessFreq << " tick(s).\n";
+}
+
+void cmdSchedulerStop(Shell& shell, const std::string&) {
+    if (!shell.scheduler.stopBatches()) {
+        console::error("The scheduler isn't generating processes.");
+        return;
+    }
+    std::cout << "Scheduler stopped generating processes.\n";
+}
+
+void cmdReportUtil(Shell& shell, const std::string&) {
+    std::filesystem::path path = std::filesystem::absolute("csopesy-log.txt");
+    std::ofstream file(path);
+    if (!file) {
+        console::error("Error: couldn't write " + path.generic_string());
+        return;
+    }
+    file << shell.scheduler.report();
+    std::cout << "Report generated at " << path.generic_string() << "!\n";
+}
+
 void cmdExit(Shell& shell, const std::string&) {
     shell.quit = true;
 }
 
 const std::vector<Command>& mainMenu() {
     static const std::vector<Command> table = {
-        {"initialize", false, cmdInitialize},
-        {"screen",     true,  cmdScreen},
-        {"exit",       false, cmdExit},
+        {"initialize",      false, cmdInitialize},
+        {"screen",          true,  cmdScreen},
+        {"scheduler-start", true,  cmdSchedulerStart},
+        {"scheduler-stop",  true,  cmdSchedulerStop},
+        {"report-util",     true,  cmdReportUtil},
+        {"exit",            false, cmdExit},
     };
     return table;
 }

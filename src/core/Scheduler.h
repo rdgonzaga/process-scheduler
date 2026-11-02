@@ -29,6 +29,10 @@ public:
     // nullptr if there's no such process or it already finished
     ProcessPtr find(const std::string& name);
 
+    // false if batches were already on / already off
+    bool startBatches();
+    bool stopBatches();
+
     // the screen -ls text: utilization, then running and finished processes
     std::string report();
 
@@ -61,6 +65,11 @@ private:
     std::vector<ProcessPtr> finished_;
     std::map<std::string, ProcessPtr> byName_;
 
+    // clock thread only
+    uint64_t sinceBatch_ = 0;
+    int batchNo_ = 0;
+
+    std::atomic<bool> generating_ = false;
     std::atomic<bool> quit_ = false;
     bool quitting_ = false;
     std::optional<std::barrier<>> sync_;
