@@ -38,7 +38,7 @@ public:
 private:
     struct Core {
         ProcessPtr process;
-        uint64_t delayLeft = 0;
+        uint64_t ticksUsed = 0;
     };
 
     struct Sleeper {
@@ -46,6 +46,8 @@ private:
         ProcessPtr process;
     };
 
+    // call with mtx held
+    void fillCores();
     void clockLoop();
     void coreLoop(int index);
     void runCore(int index);
