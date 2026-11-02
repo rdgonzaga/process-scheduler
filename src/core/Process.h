@@ -45,7 +45,7 @@ struct Process {
 // FOR loops are unrolled here, so code.size() lands exactly in [minIns, maxIns].
 Process makeProcess(int id, const std::string& name, uint64_t minIns, uint64_t maxIns);
 
-// Runs the instruction at pc on the given core. Returns the ticks to sleep, 0 if none.
+// returns ticks to sleep, 0 if none
 uint8_t step(Process& p, int core);
 
 std::string printMessage(const Process& p);

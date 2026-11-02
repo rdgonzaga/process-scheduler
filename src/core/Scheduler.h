@@ -33,7 +33,6 @@ public:
     bool startBatches();
     bool stopBatches();
 
-    // the screen -ls text: utilization, then running and finished processes
     std::string report();
 
     // guards everything below, and any Process reachable from it
