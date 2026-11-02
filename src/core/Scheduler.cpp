@@ -204,7 +204,6 @@ void Scheduler::runCore(int index) {
             return;
         }
         if (sleepTicks > 0) {
-            p.delayLeft = 0;
             sleeping_.push_back({tick_ + sleepTicks, core.process});
             core.process = nullptr;
             return;
