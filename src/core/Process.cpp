@@ -7,7 +7,7 @@ namespace {
 
 constexpr int MAX_FOR_DEPTH = 3;
 // max-ins can be 2^32, so a process only ever holds this many instructions at once
-constexpr uint64_t CHUNK = 1024;
+constexpr uint64_t CHUNK = 128;
 
 std::mt19937_64& rng() {
     thread_local std::mt19937_64 engine{std::random_device{}()};
