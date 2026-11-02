@@ -1,6 +1,7 @@
 #include "core/Commands.h"
 
 #include <cctype>
+#include <iostream>
 #include <vector>
 
 #include "ui/Console.h"
@@ -20,13 +21,28 @@ std::string toLower(std::string s) {
     return s;
 }
 
+void cmdInitialize(Shell& shell, const std::string&) {
+    if (shell.initialized) {
+        console::error("The system is already initialized.");
+        return;
+    }
+    std::string problem = loadConfig("config.txt", shell.config);
+    if (!problem.empty()) {
+        console::error("Error: " + problem);
+        return;
+    }
+    shell.initialized = true;
+    std::cout << "Initialized with " << shell.config.numCpu << " CPU(s) using " << shell.config.scheduler << ".\n";
+}
+
 void cmdExit(Shell& shell, const std::string&) {
     shell.quit = true;
 }
 
 const std::vector<Command>& mainMenu() {
     static const std::vector<Command> table = {
-        {"exit", cmdExit},
+        {"initialize", false, cmdInitialize},
+        {"exit",       false, cmdExit},
     };
     return table;
 }
@@ -43,6 +59,10 @@ void execute(Shell& shell, const std::string& line) {
 
     for (const Command& command : mainMenu()) {
         if (name == command.name) {
+            if (command.needsInit && !shell.initialized) {
+                console::error("Error: run 'initialize' first.");
+                return;
+            }
             command.run(shell, args);
             return;
         }

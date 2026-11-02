@@ -49,6 +49,9 @@
     <Link>
       <SubSystem>Console</SubSystem>
     </Link>
+    <PostBuildEvent>
+      <Command>copy /Y "$(ProjectDir)config.txt" "$(OutDir)config.txt"</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
@@ -65,13 +68,18 @@
     <ClCompile Include="src\main.cpp" />
     <ClCompile Include="src\art\AsciiArt.cpp" />
     <ClCompile Include="src\core\Commands.cpp" />
+    <ClCompile Include="src\core\SystemConfig.cpp" />
     <ClCompile Include="src\ui\Console.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Config.h" />
     <ClInclude Include="src\art\AsciiArt.h" />
     <ClInclude Include="src\core\Commands.h" />
+    <ClInclude Include="src\core\SystemConfig.h" />
     <ClInclude Include="src\ui\Console.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="config.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
