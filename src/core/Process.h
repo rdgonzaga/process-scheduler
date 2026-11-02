@@ -11,7 +11,7 @@ inline constexpr uint8_t LITERAL = 0xFF;
 
 enum class OpCode : uint8_t { Print, Declare, Add, Subtract, Sleep };
 
-// Kept small on purpose: batch-process-freq 1 queues thousands of these.
+// Kept small on purpose: every queued process holds a chunk of these.
 struct Instruction {
     OpCode op;
     uint8_t target;
@@ -31,7 +31,9 @@ struct Process {
     std::string name;
     std::time_t createdAt = 0;
 
+    // the next few instructions, starting at line codeStart; refilled as pc moves on
     std::vector<Instruction> code;
+    uint64_t codeStart = 0;
     uint64_t pc = 0;
     uint64_t totalLines = 0;
     // busy-wait ticks left before the next instruction; survives preemption
@@ -42,7 +44,7 @@ struct Process {
     bool finished() const { return pc >= totalLines; }
 };
 
-// FOR loops are unrolled here, so code.size() lands exactly in [minIns, maxIns].
+// FOR loops are unrolled, so totalLines lands exactly in [minIns, maxIns].
 Process makeProcess(int id, const std::string& name, uint64_t minIns, uint64_t maxIns);
 
 // returns ticks to sleep, 0 if none
