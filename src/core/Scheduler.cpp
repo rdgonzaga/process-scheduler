@@ -223,7 +223,8 @@ void Scheduler::runCore(int index) {
             return;
         }
         if (sleepTicks > 0) {
-            sleeping_.push_back({tick_ + sleepTicks, core.process});
+            // the SLEEP itself used this tick; stay off the CPU for the next sleepTicks
+            sleeping_.push_back({tick_ + sleepTicks + 1, core.process});
             core.process = nullptr;
             return;
         }
