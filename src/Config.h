@@ -2,7 +2,7 @@
 
 namespace config {
 
-inline constexpr int TICK_MS = 100;
+inline constexpr int TICK_MS = 10;
 
 // xterm 256-color codes, same as marquee-console
 inline constexpr int LOGO_GRADIENT[] = {157, 120, 84, 78, 41, 35};
