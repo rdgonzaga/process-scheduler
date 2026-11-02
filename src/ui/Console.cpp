@@ -4,6 +4,7 @@
 
 #include "Config.h"
 
+#if defined(_WIN32)
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -52,3 +53,28 @@ void error(const std::string& message) {
 std::string fg(int color) { return "\x1b[38;5;" + std::to_string(color) + "m"; }
 
 }
+#else
+namespace console {
+
+void init() {}
+
+void restore() {
+    write(RESET);
+}
+
+void write(const std::string& text) {
+    std::cout << text << std::flush;
+}
+
+void clear() {
+    write("\x1b[2J\x1b[3J\x1b[H");
+}
+
+void error(const std::string& message) {
+    write(fg(config::COLOR_ERROR) + message + RESET + "\n");
+}
+
+std::string fg(int color) { return "\x1b[38;5;" + std::to_string(color) + "m"; }
+
+}
+#endif

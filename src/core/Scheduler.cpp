@@ -7,6 +7,7 @@
 
 #include "Config.h"
 
+#if defined(_WIN32)
 #ifndef NOMINMAX
 #define NOMINMAX
 #endif
@@ -14,6 +15,7 @@
 #include <windows.h>
 #include <timeapi.h>
 #pragma comment(lib, "winmm.lib")
+#endif
 
 Scheduler::~Scheduler() {
     stop();
@@ -27,7 +29,9 @@ void Scheduler::start(const SystemConfig& config) {
     sync_.emplace(static_cast<std::ptrdiff_t>(config.numCpu + 1));
 
     // Windows rounds sleep_for up to ~15.6 ms by default, which would stretch a 10 ms tick
+#if defined(_WIN32)
     timeBeginPeriod(1);
+#endif
 
     for (int i = 0; i < static_cast<int>(config.numCpu); ++i) coreThreads_.emplace_back(&Scheduler::coreLoop, this, i);
     clock_ = std::thread(&Scheduler::clockLoop, this);
@@ -39,7 +43,9 @@ void Scheduler::stop() {
     clock_.join();
     for (std::thread& t : coreThreads_) t.join();
     coreThreads_.clear();
+#if defined(_WIN32)
     timeEndPeriod(1);
+#endif
 }
 
 ProcessPtr Scheduler::spawn(const std::string& name) {
