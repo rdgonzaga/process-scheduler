@@ -6,6 +6,8 @@
 namespace {
 
 constexpr int MAX_FOR_DEPTH = 3;
+// max-ins can be 2^32, so a process only ever holds this many instructions at once
+constexpr uint64_t CHUNK = 1024;
 
 std::mt19937_64& rng() {
     thread_local std::mt19937_64 engine{std::random_device{}()};
@@ -69,13 +71,17 @@ Process makeProcess(int id, const std::string& name, uint64_t minIns, uint64_t m
     p.name = name;
     p.createdAt = std::time(nullptr);
     p.totalLines = randomBetween(minIns, maxIns);
-    p.code.reserve(p.totalLines);
-    generate(p.code, p.totalLines, 0);
+    generate(p.code, std::min(CHUNK, p.totalLines), 0);
     return p;
 }
 
 uint8_t step(Process& p, int core) {
-    const Instruction& ins = p.code[p.pc];
+    if (p.pc - p.codeStart >= p.code.size()) {
+        p.codeStart += p.code.size();
+        p.code.clear();
+        generate(p.code, std::min(CHUNK, p.totalLines - p.codeStart), 0);
+    }
+    const Instruction& ins = p.code[p.pc - p.codeStart];
     uint8_t sleepTicks = 0;
 
     switch (ins.op) {
