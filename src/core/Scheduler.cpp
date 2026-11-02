@@ -7,6 +7,14 @@
 
 #include "Config.h"
 
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <timeapi.h>
+#pragma comment(lib, "winmm.lib")
+
 Scheduler::~Scheduler() {
     stop();
 }
@@ -18,6 +26,9 @@ void Scheduler::start(const SystemConfig& config) {
     quitting_ = false;
     sync_.emplace(static_cast<std::ptrdiff_t>(config.numCpu + 1));
 
+    // Windows rounds sleep_for up to ~15.6 ms by default, which would stretch a 10 ms tick
+    timeBeginPeriod(1);
+
     for (int i = 0; i < static_cast<int>(config.numCpu); ++i) coreThreads_.emplace_back(&Scheduler::coreLoop, this, i);
     clock_ = std::thread(&Scheduler::clockLoop, this);
 }
@@ -28,6 +39,7 @@ void Scheduler::stop() {
     clock_.join();
     for (std::thread& t : coreThreads_) t.join();
     coreThreads_.clear();
+    timeEndPeriod(1);
 }
 
 ProcessPtr Scheduler::spawn(const std::string& name) {
@@ -131,6 +143,8 @@ bool Scheduler::stopBatches() {
 }
 
 void Scheduler::clockLoop() {
+    const auto tickLength = std::chrono::milliseconds(config::TICK_MS);
+    auto nextTick = std::chrono::steady_clock::now();
     while (true) {
         ProcessPtr batch;
         if (generating_ && ++sinceBatch_ >= config_.batchProcessFreq) {
@@ -171,7 +185,12 @@ void Scheduler::clockLoop() {
             std::lock_guard<std::mutex> lock(mtx);
             fillCores();
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(config::TICK_MS));
+        // sleep to a fixed deadline so the tick's own work doesn't stretch it;
+        // after a long stall, start over instead of rushing to catch up
+        nextTick += tickLength;
+        auto now = std::chrono::steady_clock::now();
+        if (nextTick < now) nextTick = now;
+        std::this_thread::sleep_until(nextTick);
     }
 }
 
