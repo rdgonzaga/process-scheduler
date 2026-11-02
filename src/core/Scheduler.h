@@ -66,9 +66,10 @@ private:
     std::map<std::string, ProcessPtr> byName_;
 
     // clock thread only
-    uint64_t sinceBatch_ = 0;
     int batchNo_ = 0;
 
+    // reset by scheduler-start so a restart waits the full batch-process-freq
+    std::atomic<uint64_t> sinceBatch_ = 0;
     std::atomic<bool> generating_ = false;
     std::atomic<bool> quit_ = false;
     bool quitting_ = false;
