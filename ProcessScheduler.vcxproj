@@ -63,6 +63,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\art\AsciiArt.cpp" />
+    <ClCompile Include="src\core\Commands.cpp" />
+    <ClCompile Include="src\ui\Console.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="src\Config.h" />
+    <ClInclude Include="src\art\AsciiArt.h" />
+    <ClInclude Include="src\core\Commands.h" />
+    <ClInclude Include="src\ui\Console.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
