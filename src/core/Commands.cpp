@@ -2,6 +2,8 @@
 
 #include <algorithm>
 #include <cctype>
+#include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <vector>
 
@@ -156,6 +158,17 @@ void cmdSchedulerStop(Shell& shell, const std::string&) {
     std::cout << "Scheduler stopped generating processes.\n";
 }
 
+void cmdReportUtil(Shell& shell, const std::string&) {
+    std::filesystem::path path = std::filesystem::absolute("csopesy-log.txt");
+    std::ofstream file(path);
+    if (!file) {
+        console::error("Error: couldn't write " + path.generic_string());
+        return;
+    }
+    file << shell.scheduler.report();
+    std::cout << "Report generated at " << path.generic_string() << "!\n";
+}
+
 void cmdExit(Shell& shell, const std::string&) {
     shell.quit = true;
 }
@@ -166,6 +179,7 @@ const std::vector<Command>& mainMenu() {
         {"screen",          true,  cmdScreen},
         {"scheduler-start", true,  cmdSchedulerStart},
         {"scheduler-stop",  true,  cmdSchedulerStop},
+        {"report-util",     true,  cmdReportUtil},
         {"exit",            false, cmdExit},
     };
     return table;
