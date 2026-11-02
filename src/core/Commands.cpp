@@ -42,7 +42,7 @@ void cmdInitialize(Shell& shell, const std::string&) {
 
 void splitCommand(const std::string& line, std::string& name, std::string& args) {
     std::string trimmed = trim(line);
-    size_t space = trimmed.find(' ');
+    size_t space = trimmed.find_first_of(" \t");
     name = toLower(trimmed.substr(0, space));
     args = space == std::string::npos ? "" : trim(trimmed.substr(space + 1));
 }
