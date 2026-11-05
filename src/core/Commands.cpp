@@ -7,6 +7,7 @@
 #include <iostream>
 #include <vector>
 
+#include "Config.h"
 #include "art/AsciiArt.h"
 #include "ui/Console.h"
 
@@ -154,7 +155,7 @@ void cmdSchedulerStart(Shell& shell, const std::string&) {
         console::error("The scheduler is already generating processes.");
         return;
     }
-    std::cout << "Scheduler started. Generating processes every " << shell.config.batchProcessFreq << " tick(s).\n";
+    std::cout << "Scheduler started. Generating processes every " << shell.config.batchProcessFreq * config::TICKS_PER_BATCH_TICK << " tick(s).\n";
 }
 
 void cmdSchedulerStop(Shell& shell, const std::string&) {
