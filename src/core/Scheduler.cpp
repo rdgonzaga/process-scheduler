@@ -153,7 +153,7 @@ void Scheduler::clockLoop() {
     auto nextTick = std::chrono::steady_clock::now();
     while (true) {
         ProcessPtr batch;
-        if (generating_ && ++sinceBatch_ >= config_.batchProcessFreq) {
+        if (generating_ && ++sinceBatch_ >= config_.batchProcessFreq * config::TICKS_PER_BATCH_TICK) {
             sinceBatch_ = 0;
             batch = std::make_shared<Process>(makeProcess(0, "", config_.minIns, config_.maxIns, config_.xCounter));
         }
