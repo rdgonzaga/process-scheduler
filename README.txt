@@ -28,7 +28,7 @@ Commands
   screen -r <name>       reattach to a running process
   screen -ls             CPU utilization, running and finished processes
                          (screen-ls works too)
-  scheduler-start        generate a process every batch-process-freq ticks
+  scheduler-start        generate a process every batch-process-freq x 10 ticks
                          (scheduler-test works too)
   scheduler-stop         stop generating processes
   report-util            save the screen -ls output to csopesy-log.txt
@@ -42,7 +42,7 @@ config.txt
   num-cpu              1 to 128
   scheduler            "fcfs" or "rr"
   quantum-cycles       RR time slice in ticks
-  batch-process-freq   ticks between generated processes
+  batch-process-freq   ticks between generated processes, in steps of 10 ticks
   min-ins / max-ins    instruction count range per process
   delays-per-exec      busy-wait ticks between instructions
                        (delay-per-exec is accepted too)
