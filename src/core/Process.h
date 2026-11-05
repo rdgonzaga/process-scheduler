@@ -24,12 +24,14 @@ struct Instruction {
 struct LogEntry {
     std::time_t time;
     int core;
+    uint16_t value;
 };
 
 struct Process {
     int id = 0;
     std::string name;
     std::time_t createdAt = 0;
+    bool xCounter = false;
 
     // the next few instructions, starting at line codeStart; refilled as pc moves on
     std::vector<Instruction> code;
@@ -45,12 +47,12 @@ struct Process {
 };
 
 // FOR loops are unrolled, so totalLines lands exactly in [minIns, maxIns].
-Process makeProcess(int id, const std::string& name, uint64_t minIns, uint64_t maxIns);
+Process makeProcess(int id, const std::string& name, uint64_t minIns, uint64_t maxIns, bool xCounter);
 
 // returns ticks to sleep, 0 if none
 uint8_t step(Process& p, int core);
 
-std::string printMessage(const Process& p);
+std::string printMessage(const Process& p, const LogEntry& log);
 
 // MM/DD/YYYY hh:mm:ssAM, the format in the spec's mockups
 std::string timestamp(std::time_t time);

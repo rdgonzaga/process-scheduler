@@ -63,13 +63,12 @@ void cmdProcessSmi(Screen& screen) {
     {
         std::lock_guard<std::mutex> lock(screen.shell.scheduler.mtx);
         const Process& p = *screen.process;
-        std::string message = printMessage(p);
 
         out += "Process name: " + p.name + "\n";
         out += "ID: " + std::to_string(p.id) + "\n";
         out += "Logs:\n";
         for (const LogEntry& log : p.logs) {
-            out += "(" + timestamp(log.time) + ") Core:" + std::to_string(log.core) + " \"" + message + "\"\n";
+            out += "(" + timestamp(log.time) + ") Core:" + std::to_string(log.core) + " \"" + printMessage(p, log) + "\"\n";
         }
         out += "\n";
         if (p.finished()) {

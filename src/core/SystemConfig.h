@@ -11,6 +11,7 @@ struct SystemConfig {
     uint64_t minIns = 0;
     uint64_t maxIns = 0;
     uint64_t delaysPerExec = 0;
+    bool xCounter = false;
 };
 
 // Returns an error message, or "" if the file loaded.
