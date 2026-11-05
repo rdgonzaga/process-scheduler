@@ -55,7 +55,7 @@ ProcessPtr Scheduler::spawn(const std::string& name) {
     }
 
     // generating thousands of instructions shouldn't stall the cores
-    auto process = std::make_shared<Process>(makeProcess(0, name, config_.minIns, config_.maxIns));
+    auto process = std::make_shared<Process>(makeProcess(0, name, config_.minIns, config_.maxIns, config_.xCounter));
 
     std::lock_guard<std::mutex> lock(mtx);
     if (byName_.count(name)) return nullptr;
@@ -155,7 +155,7 @@ void Scheduler::clockLoop() {
         ProcessPtr batch;
         if (generating_ && ++sinceBatch_ >= config_.batchProcessFreq) {
             sinceBatch_ = 0;
-            batch = std::make_shared<Process>(makeProcess(0, "", config_.minIns, config_.maxIns));
+            batch = std::make_shared<Process>(makeProcess(0, "", config_.minIns, config_.maxIns, config_.xCounter));
         }
 
         {

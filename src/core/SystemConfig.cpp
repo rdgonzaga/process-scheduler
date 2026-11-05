@@ -52,6 +52,12 @@ std::string loadConfig(const std::string& path, SystemConfig& out) {
             continue;
         }
 
+        if (key == "x-counter") {
+            if (value != "0" && value != "1") return "x-counter must be 0 or 1.";
+            loaded.xCounter = value == "1";
+            continue;
+        }
+
         auto it = NUMBER_KEYS.find(key);
         if (it == NUMBER_KEYS.end()) continue;
 

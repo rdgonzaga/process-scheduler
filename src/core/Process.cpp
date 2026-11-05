@@ -59,19 +59,34 @@ void generate(std::vector<Instruction>& out, uint64_t count, int depth) {
     }
 }
 
+void fill(Process& p, uint64_t count) {
+    if (!p.xCounter) {
+        generate(p.code, count, 0);
+        return;
+    }
+    for (uint64_t line = p.codeStart; line < p.codeStart + count; ++line) {
+        if (line % 2 == 0) {
+            p.code.push_back({OpCode::Print, 0, LITERAL, LITERAL, 0, 0});
+        } else {
+            p.code.push_back({OpCode::Add, 0, 0, LITERAL, 0, static_cast<uint16_t>(randomBetween(1, 10))});
+        }
+    }
+}
+
 uint16_t operand(const Process& p, uint8_t var, uint16_t literal) {
     return var == LITERAL ? literal : p.vars[var];
 }
 
 }
 
-Process makeProcess(int id, const std::string& name, uint64_t minIns, uint64_t maxIns) {
+Process makeProcess(int id, const std::string& name, uint64_t minIns, uint64_t maxIns, bool xCounter) {
     Process p;
     p.id = id;
     p.name = name;
     p.createdAt = std::time(nullptr);
+    p.xCounter = xCounter;
     p.totalLines = randomBetween(minIns, maxIns);
-    generate(p.code, std::min(CHUNK, p.totalLines), 0);
+    fill(p, std::min(CHUNK, p.totalLines));
     return p;
 }
 
@@ -79,14 +94,14 @@ uint8_t step(Process& p, int core) {
     if (p.pc - p.codeStart >= p.code.size()) {
         p.codeStart += p.code.size();
         p.code.clear();
-        generate(p.code, std::min(CHUNK, p.totalLines - p.codeStart), 0);
+        fill(p, std::min(CHUNK, p.totalLines - p.codeStart));
     }
     const Instruction& ins = p.code[p.pc - p.codeStart];
     uint8_t sleepTicks = 0;
 
     switch (ins.op) {
     case OpCode::Print:
-        p.logs.push_back({std::time(nullptr), core});
+        p.logs.push_back({std::time(nullptr), core, p.vars[0]});
         break;
     case OpCode::Declare:
         p.vars[ins.target] = ins.lhs;
@@ -113,7 +128,8 @@ uint8_t step(Process& p, int core) {
     return sleepTicks;
 }
 
-std::string printMessage(const Process& p) {
+std::string printMessage(const Process& p, const LogEntry& log) {
+    if (p.xCounter) return "Value from: " + std::to_string(log.value);
     return "Hello world from " + p.name + "!";
 }
 

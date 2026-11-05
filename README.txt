@@ -27,7 +27,9 @@ Commands
   screen -s <name>       create a process and attach to its screen
   screen -r <name>       reattach to a running process
   screen -ls             CPU utilization, running and finished processes
+                         (screen-ls works too)
   scheduler-start        generate a process every batch-process-freq ticks
+                         (scheduler-test works too)
   scheduler-stop         stop generating processes
   report-util            save the screen -ls output to csopesy-log.txt
   exit                   quit
@@ -44,3 +46,6 @@ config.txt
   min-ins / max-ins    instruction count range per process
   delays-per-exec      busy-wait ticks between instructions
                        (delay-per-exec is accepted too)
+  x-counter            optional, 0 by default. 1 gives every process x = 0 and
+                       alternating PRINT("Value from: " + x) and ADD(x, x, 1-10).
+                       Set it to 1 only for test case 5.
