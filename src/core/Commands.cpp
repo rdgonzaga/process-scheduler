@@ -142,6 +142,14 @@ void cmdScreen(Shell& shell, const std::string& args) {
     attach(shell, process);
 }
 
+void cmdScreenLs(Shell& shell, const std::string& args) {
+    if (!args.empty()) {
+        console::error("Usage: screen-ls");
+        return;
+    }
+    cmdScreen(shell, "-ls");
+}
+
 void cmdSchedulerStart(Shell& shell, const std::string&) {
     if (!shell.scheduler.startBatches()) {
         console::error("The scheduler is already generating processes.");
@@ -181,7 +189,9 @@ const std::vector<Command>& mainMenu() {
     static const std::vector<Command> table = {
         {"initialize",      false, cmdInitialize},
         {"screen",          true,  cmdScreen},
+        {"screen-ls",       true,  cmdScreenLs},
         {"scheduler-start", true,  cmdSchedulerStart},
+        {"scheduler-test",  true,  cmdSchedulerStart},
         {"scheduler-stop",  true,  cmdSchedulerStop},
         {"report-util",     true,  cmdReportUtil},
         {"exit",            false, cmdExit},
