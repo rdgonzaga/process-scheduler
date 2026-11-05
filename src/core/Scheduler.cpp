@@ -186,11 +186,6 @@ void Scheduler::clockLoop() {
         if (quitting_) return;
         sync_->arrive_and_wait();
 
-        // refill cores freed this tick, or screen -ls between ticks sees them idle
-        {
-            std::lock_guard<std::mutex> lock(mtx);
-            fillCores();
-        }
         // sleep to a fixed deadline so the tick's own work doesn't stretch it;
         // after a long stall, start over instead of rushing to catch up
         nextTick += tickLength;
@@ -226,18 +221,21 @@ void Scheduler::runCore(int index) {
         if (p.finished()) {
             finished_.push_back(core.process);
             core.process = nullptr;
-            return;
-        }
-        if (sleepTicks > 0) {
+        } else if (sleepTicks > 0) {
             // the SLEEP itself used this tick; stay off the CPU for the next sleepTicks
             sleeping_.push_back({tick_ + sleepTicks + 1, core.process});
             core.process = nullptr;
-            return;
         }
     }
 
-    if (config_.scheduler == "rr" && core.ticksUsed >= config_.quantumCycles) {
+    if (core.process && config_.scheduler == "rr" && core.ticksUsed >= config_.quantumCycles) {
         ready_.push_back(core.process);
         core.process = nullptr;
+    }
+
+    if (!core.process && !ready_.empty()) {
+        core.process = ready_.front();
+        core.ticksUsed = 0;
+        ready_.pop_front();
     }
 }
