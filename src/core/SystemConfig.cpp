@@ -12,6 +12,7 @@ struct Range {
     uint64_t SystemConfig::*field;
     uint64_t min;
     uint64_t max;
+    bool powerOfTwo = false;
 };
 
 const std::map<std::string, Range> NUMBER_KEYS = {
@@ -21,6 +22,10 @@ const std::map<std::string, Range> NUMBER_KEYS = {
     {"min-ins",            {&SystemConfig::minIns, 1, MAX_VALUE}},
     {"max-ins",            {&SystemConfig::maxIns, 1, MAX_VALUE}},
     {"delays-per-exec",    {&SystemConfig::delaysPerExec, 0, MAX_VALUE}},
+    {"max-overall-mem",  {&SystemConfig::maxOverallMem, 64, 65536, true}},
+    {"mem-per-frame",    {&SystemConfig::memPerFrame,   64, 65536, true}},
+    {"min-mem-per-proc", {&SystemConfig::minMemPerProc, 64, 65536, true}},
+    {"max-mem-per-proc", {&SystemConfig::maxMemPerProc, 64, 65536, true}},
 };
 
 std::string unquote(const std::string& s) {
@@ -49,12 +54,6 @@ std::string loadConfig(const std::string& path, SystemConfig& out) {
             if (value != "fcfs" && value != "rr") return "scheduler must be \"fcfs\" or \"rr\".";
             loaded.scheduler = value;
             seen[key] = true;
-            continue;
-        }
-
-        if (key == "x-counter") {
-            if (value != "0" && value != "1") return "x-counter must be 0 or 1.";
-            loaded.xCounter = value == "1";
             continue;
         }
 
